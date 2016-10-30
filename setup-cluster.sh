@@ -60,10 +60,7 @@ grep 'basic-auth-file' /etc/kubernetes/manifests/kube-apiserver.json >/dev/null 
     sleep 1
   done
   echo "waiting 20s seconds for api server to be available again."
-  for ((i=1;i<=20;i++)); do
-    echo -n "."
-    sleep 1
-  done
+  sleep 20
   echo
   log_end
 )
