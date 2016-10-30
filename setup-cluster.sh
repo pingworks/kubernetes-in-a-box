@@ -25,7 +25,7 @@ dpkg -l kubelet >/dev/null 2>&1 || (
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
   apt-key list | grep '2048R/A7317B0F' >/dev/null \
-    || curl -q https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+    || curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
   apt-get update && apt-get install -y docker.io kubelet kubeadm kubectl kubernetes-cni
   log_end
 )
@@ -47,18 +47,6 @@ id $USERNAME | grep docker > /dev/null || (
   log_end
 )
 
-kubectl describe daemonset weave-net --namespace=kube-system > /dev/null 2>&1 || (
-  log_start "Deploying pod network.."
-  kubectl apply -f https://git.io/weave-kube
-  log_end
-)
-
-kubectl describe deployment kubernetes-dashboard --namespace=kube-system >/dev/null 2>&1 || (
-  log_start "Deploying dashboard.."
-  kubectl apply -f https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml
-  log_end
-)
-
 [ -e /etc/kubernetes/pki/basic-auth.csv ] \
   || echo 'admin,admin,1000' > /etc/kubernetes/pki/basic-auth.csv
 grep 'basic-auth-file' /etc/kubernetes/manifests/kube-apiserver.json >/dev/null || (
@@ -71,9 +59,21 @@ grep 'basic-auth-file' /etc/kubernetes/manifests/kube-apiserver.json >/dev/null 
     echo -n "."
     sleep 1
   done
-  echo "waiting 10s seconds for api server to be available again."
-  sleep 10
+  echo "waiting 15s seconds for api server to be available again."
+  sleep 15
   echo
+  log_end
+)
+
+kubectl describe daemonset weave-net --namespace=kube-system > /dev/null 2>&1 || (
+  log_start "Deploying pod network.."
+  kubectl apply -f https://git.io/weave-kube
+  log_end
+)
+
+kubectl describe deployment kubernetes-dashboard --namespace=kube-system >/dev/null 2>&1 || (
+  log_start "Deploying dashboard.."
+  kubectl apply -f https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml
   log_end
 )
 
