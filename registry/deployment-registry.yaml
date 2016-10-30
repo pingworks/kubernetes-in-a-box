@@ -1,0 +1,42 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kube-registry
+  namespace: kube-system
+  labels:
+    app: kube-registry
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kube-registry
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        env:
+        - name: REGISTRY_HTTP_ADDR
+          value: :5000
+        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+          value: /var/lib/registry
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /certs/registry.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /certs/registry.key
+        volumeMounts:
+        - name: image-store
+          mountPath: /var/lib/registry
+        - name: cert-dir
+          mountPath: /certs
+        ports:
+        - containerPort: 5000
+          name: registry
+          protocol: TCP
+      volumes:
+      - name: image-store
+        hostPath:
+          path: /data/kube-registry
+      - name: cert-dir
+        secret:
+          secretName: registry-tls-secret
