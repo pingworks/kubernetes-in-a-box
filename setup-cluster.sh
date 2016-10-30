@@ -15,7 +15,7 @@ function log_end {
   echo "####################################"
   echo "# done."
   echo "####################################"
-  echo
+  echo "#"
 }
 
 dpkg -l kubelet >/dev/null 2>&1 || (
@@ -59,8 +59,11 @@ grep 'basic-auth-file' /etc/kubernetes/manifests/kube-apiserver.json >/dev/null 
     echo -n "."
     sleep 1
   done
-  echo "waiting 15s seconds for api server to be available again."
-  sleep 15
+  echo "waiting 20s seconds for api server to be available again."
+  for ((i=1;i<=20;i++)); do
+    echo -n "."
+    sleep 1
+  done
   echo
   log_end
 )
@@ -79,6 +82,7 @@ kubectl describe deployment kubernetes-dashboard --namespace=kube-system >/dev/n
 
 log_start "Waiting for cluster pods to become ready.."
 output=$(kubectl get pods --all-namespaces)
+echo "$output"
 while echo "$output" | awk '{print $4}' | grep -v STATUS | grep -v Running >/dev/null; do
   echo '------------------- Waiting 3 sec. -------------------'
   sleep 3
