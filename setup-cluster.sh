@@ -2,6 +2,11 @@
 
 set -e
 
+KUBEVERSION="v1.4.5"
+SVCCIDR="100.64.0.0/12"
+CLUSTERDNS="100.64.0.10"
+APISERVER="100.64.0.1"
+
 USERNAME=${SUDO_USER}
 NAMESPACE=$USERNAME
 
@@ -27,7 +32,7 @@ EOF
   apt-key list | grep '2048R/A7317B0F' >/dev/null \
     || curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
   apt-get update && apt-get install -y docker.io kubelet kubeadm kubectl kubernetes-cni
-  sed -i -e 's;--cluster-dns=[0-9\.]* ;--cluster-dns=100.64.0.10;' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+  sed -i -e "s;--cluster-dns=[0-9\.]* ;--cluster-dns=${CLUSTERDNS};" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
   log_end
 )
 
@@ -41,8 +46,8 @@ id $USERNAME | grep docker > /dev/null || (
   log_start "Initializing Cluster.."
   kubeadm init \
     --api-advertise-addresses 192.168.200.2 \
-    --use-kubernetes-version v1.4.5 \
-    --service-cidr 100.64.0.0/12 \
+    --use-kubernetes-version ${KUBEVERSION} \
+    --service-cidr ${SVCCIDR} \
     | tee /vagrant/kubeinit.out && sleep 2
   grep '^kubeadm join --token' /vagrant/kubeinit.out > /vagrant/kubeadm-join
   kubectl taint nodes --all dedicated-
@@ -118,7 +123,7 @@ kubectl describe rc kube-registry --namespace=kube-system >/dev/null 2>&1 || (
 
 log_start "Configuring name resolution.."
 IFACE=enp0s3
-sed -i -e "s;iface $IFACE inet dhcp;iface $IFACE inet dhcp\ndns-nameserver 100.64.0.10;" /etc/network/interfaces
+sed -i -e "s;iface $IFACE inet dhcp;iface $IFACE inet dhcp\ndns-nameserver ${CLUSTERDNS};" /etc/network/interfaces
 ifdown $IFACE > /dev/null 2>&1
 ifup $IFACE > /dev/null 2>&1
 log_end
@@ -126,13 +131,13 @@ log_end
 echo "##############################################################################"
 echo "# Your local cluster is set up."
 echo "#"
-echo "# To access the service ip net (100.64.0.0/12) add a route on your host:"
-echo "# linux: sudo ip r a 100.64.0.0/12 via 192.168.200.2"
-echo "# mac:   sudo route -n add -net 100.64.0.0/12 192.168.200.2"
+echo "# To access the service ip net (${SVCCIDR}) add a route on your host:"
+echo "# linux: sudo ip r a ${SVCCIDR} via 192.168.200.2"
+echo "# mac:   sudo route -n add -net ${SVCCIDR} 192.168.200.2"
 echo "#"
-echo "# To resolv DNS names from the cluster add 100.64.0.10 as DNS."
-echo "# linux: echo \"nameserver 100.64.0.10\" | sudo resolvconf -a wlan"
-echo "# mac:   sudo networksetup -setdnsservers Wi-Fi 100.64.0.10"
+echo "# To resolv DNS names from the cluster add ${CLUSTERDNS} as DNS."
+echo "# linux: echo \"nameserver ${CLUSTERDNS}\" | sudo resolvconf -a wlan"
+echo "# mac:   sudo networksetup -setdnsservers Wi-Fi ${CLUSTERDNS}"
 echo "#"
 echo "# To push images to the k8s registry run the following cmds on your host:"
 echo "# sudo mkdir -p /etc/docker/certs.d/kube-registry.kube-system.svc.cluster.local\:5000"
@@ -140,6 +145,6 @@ echo "# sudo cp registry/registry.crt /etc/docker/certs.d/kube-registry.kube-sys
 echo "#"
 echo "# You can access the kubernetes dashboard at: "
 echo "# https://kubernetes.default.svc.cluster.local/ui or"
-echo "# https://100.64.0.10/ui"
+echo "# https://${APISERVER}/ui"
 echo "##############################################################################"
 echo
