@@ -27,6 +27,7 @@ EOF
   apt-key list | grep '2048R/A7317B0F' >/dev/null \
     || curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
   apt-get update && apt-get install -y docker.io kubelet kubeadm kubectl kubernetes-cni
+  sed -i -e 's;--cluster-dns=[0-9\.]* ;--cluster-dns=100.64.0.10;' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
   log_end
 )
 
@@ -41,6 +42,7 @@ id $USERNAME | grep docker > /dev/null || (
   kubeadm init \
     --api-advertise-addresses 192.168.200.2 \
     --use-kubernetes-version v1.4.5 \
+    --service-cidr 100.64.0.0/12 \
     | tee /vagrant/kubeinit.out && sleep 2
   grep '^kubeadm join --token' /vagrant/kubeinit.out > /vagrant/kubeadm-join
   kubectl taint nodes --all dedicated-
